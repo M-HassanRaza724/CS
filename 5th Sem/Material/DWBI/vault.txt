@@ -1,0 +1,89 @@
+Here is the **corrected, academically accurate version** of the Data Vault 2.0 End-to-End Architecture and ETL/ELT pipeline in a clean text format that you can directly sketch on your university exam answer sheet.
+
+---
+
+### 1. Summary of What Was Wrong vs. What Is Correct
+
+Before drawing the diagram in an exam, keep these three corrections in mind so you never lose marks on schema normalization labels:
+
+| Layer | Incorrect Label in the Internet Image | Correct Academic Label for Your Exam | Why? |
+| --- | --- | --- | --- |
+| **Staging Zone** | `3rd NF` (Incorrect) | **Raw / Flat / Source-Mirrored Tables** | Staging holds temporary, unaltered extracts from source systems just long enough to add `Load_DTS`, `Record_Source`, and compute Hash Keys.
+
+ |
+| **Data Vault Layer** | `Denormalized` (Incorrect) | **Highly Normalized (Hubs, Links, Satellites)** | Dan Linstedt explicitly defines the Data Vault as a *uniquely linked set of normalized tables* that separates business keys, relationships, and context.
+
+ |
+| **Data Marts Layer** | `Star Schema` (Correct) | **Denormalized Star Schema (Facts & Dimensions)** | Data is flattened (denormalized) here into Facts and Dimensions so BI tools can run fast queries with single-hop joins.
+
+ |
+
+---
+
+### 2. The Corrected Text-Based Diagram (Exam-Ready Layout)
+
+You can draw these 6 columns from left to right on your exam paper. Notice how the **structural format** (top row of each box) and **ETL/ELT operations** (arrows between boxes) are properly aligned:
+
+# ========================================================================================================================================
+CORRECTED DATA VAULT 2.0 ARCHITECTURE & ETL/ELT PIPELINE
+
+[1. DATA SOURCES]       [2. LANDING / STAGING]        [3. RAW DATA VAULT]         [4. BUSINESS VAULT]       [5. DATA MARTS]      [6. CONSUMERS]
+(Operational /          (Flat / Unaltered             (Highly Normalized          (Normalized +             (Denormalized        (Front-End
+Heterogeneous)          Temporary Tables)             Insert-Only Core)           Query Helpers)            Star Schemas)        Analytics)
++----------------+      +--------------------+       +--------------------+      +--------------------+    +----------------+   +--------------+
+
+| • RDBMS (OLTP) | | • Mirrors Source | | +--------------+ | | • Soft Business | | [Dim]  [Dim] | | • BI Tools |
+| (3NF Tables) | | Structure | | | HUBS | | | Rules & KPIs | | \    / | | (Power BI, |
+| |LOAD/ | | | |(Business Key)| | | • Derived Metrics | | [FACT] | | Tableau) |
+| • ERPs & CRMs | CDC | • Error / Rejected | ETL | +--------------+ | ELT | & Aggregations |ELT | /    \ | | |
+| (SAP/Siebel) |===>| Row Routing |====>| | |=====>| |===>| [Dim]  [Dim] |==>| • Reporting |
+| |(Hop | |(Hop 1:| v |(Hop | +----------------+ |--->| (DM 1: Sales) | | Dashboards |
+| • Mainframes | 0) | • Stamp Metadata: |100% | +--------------+ | 2) | | PIT Tables | | +----------------+ | |
+| | | - Load_DTS |Paral- | | LINKS | | | |(Point-in-Time) | | +----------------+ | • APIs & |
+| • Flat Files, | | - Record_Source | lel | |(M:N Relations| | | +----------------+ |--->| (DM 2: Fin.) |==>| Business |
+| Spreadsheets | | | Load) | +--------------+ | | | Bridge Tables | | +----------------+ | Apps |
+| | | • Compute MD5/SHA | | | | | |(Multi-Hop Join)| | +----------------+ | |
+| • IoT / JSON / | | Hash Keys | | v | | +----------------+ |--->| (DM 3: Ops.) |==>| • Ad-Hoc SQL |
+| Web Logs | | | | +--------------+ | | | +----------------+ | & ML |
++----------------+      +--------------------+ | | SATELLITES | | +--------------------+                         +--------------+
+
+| | (Descriptors | |
+| | & History) | |
+| +--------------+ |
++--------------------+
++---------------------------------------------------------------------------------------------------+
+
+| METADATA REPOSITORY, DATA CATALOG, SEARCH, LINEAGE & GOVERNANCE |
++---------------------------------------------------------------------------------------------------+
+
+---
+
+### 3. Exact Text Description of Each Stage (To Write Below Your Diagram in Exams)
+
+If an exam question asks you to explain the diagram above, write these **four short bullet points** underneath your sketch to guarantee full marks:
+
+1. **Hop 0 — Source Extraction (`LOAD` / `CDC` into Staging Zone):**
+Raw data from structured OLTP databases (3NF), semi-structured JSON/IoT logs, and flat files is extracted via nightly batch `LOAD` or real-time `CDC` (Change Data Capture) into the **Staging Zone**. The Staging tables are **flat, temporary structures** that mirror the source systems. Here, corrupted records are routed to an `Error` table, and every valid row is stamped with `Load_DTS` (load timestamp), `Record_Source` (originating application), and a deterministic **Hash Key**.
+
+
+2. **Hop 1 — Parallel Vault Ingestion (`Staging` $\rightarrow$ `Raw Data Vault`):**
+Using the pre-calculated Hash Keys, an automated **insert-only** ETL/ELT process decomposes the flat staging rows into **highly normalized** Data Vault tables **100% in parallel**:
+
+
+* **Hubs:** Store unique natural Business Keys, Hash Key PK, `Load_DTS`, and `Record_Source`.
+
+
+* **Links:** Store many-to-many ($M:N$) relationships and transactions between Hubs.
+
+
+* **Satellites:** Store time-variant descriptive attributes (`Load_DTS` deltas) split by rate of change or source system.
+
+
+
+
+3. **Hop 2 — Business Alignment (`Raw Data Vault` $\rightarrow$ `Business Data Vault`):**
+Inside the Vault, ELT transformations apply corporate business rules, standard calculations, and KPIs without altering the raw audit trail. Engineers also populate **Point-in-Time (PIT)** and **Bridge** helper tables to pre-join the normalized Hubs, Links, and Satellites.
+
+
+4. **Hop 3 — Information Delivery (`Data Vault` $\rightarrow$ `Star Schema Data Marts`):**
+Parallel ELT pipelines (or SQL Materialized Views) join the Vault tables (`Hub + Link + Satellite + PIT`) and **denormalize** them into **Kimball Star Schemas** (`Fact` and `Dimension` tables) across departmental Data Marts (`DM 1`, `DM 2`, `DM 3`), allowing BI tools and dashboards in the **Consumer Layer** to query data with sub-second response times.
